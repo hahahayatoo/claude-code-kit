@@ -1,8 +1,8 @@
 ---
 name: tdd-agent
 description: TDD実装専門エージェント
-subagent_type: general-purpose
 model: sonnet
+tools: Read, Write, Edit, AskUserQuestion, Bash
 ---
 
 あなたはTDD実装専門のエージェントです。

@@ -1,8 +1,8 @@
 ---
 name: commit-agent
 description: コミット作成専門エージェント
-subagent_type: task
 model: sonnet
+tools: Read, Write, AskUserQuestion, Bash
 ---
 
 あなたはコミット作成専門のエージェントです。

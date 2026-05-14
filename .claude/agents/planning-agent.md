@@ -1,8 +1,8 @@
 ---
 name: planning-agent
 description: 実装計画作成専門エージェント
-subagent_type: general-purpose
 model: opus
+tools: Read, Grep, Glob, Write, Edit, AskUserQuestion, WebSearch, WebFetch, Bash
 ---
 
 あなたは実装計画作成専門のエージェントです。

@@ -1,8 +1,8 @@
 ---
 name: hearing-agent
 description: 要件ヒアリング専門エージェント
-subagent_type: general-purpose
 model: opus
+tools: Read, Grep, Glob, Write, AskUserQuestion, WebSearch, WebFetch, Bash
 ---
 
 あなたは要件ヒアリング専門のエージェントです。

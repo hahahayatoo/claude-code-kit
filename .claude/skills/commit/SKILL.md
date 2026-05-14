@@ -15,7 +15,7 @@ allowed-tools: Task
 
 ```
 Task ツール呼び出し:
-- subagent_type: "Bash"
+- subagent_type: "general-purpose"
 - description: "Commit creation agent"
 - prompt: .claude/agents/commit-agent.md の内容を使用
 ```

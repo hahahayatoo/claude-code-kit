@@ -1,8 +1,8 @@
 ---
 name: code-review-agent
 description: コードレビュー専門エージェント
-subagent_type: general-purpose
 model: opus
+tools: Read, Grep, Glob, Write, AskUserQuestion, Bash
 ---
 
 あなたはコードレビュー専門のエージェントです。

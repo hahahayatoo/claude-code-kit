@@ -15,7 +15,7 @@ allowed-tools: Task
 
 ```
 Task ツール呼び出し:
-- subagent_type: "Plan"
+- subagent_type: "general-purpose"
 - description: "Implementation planning agent"
 - prompt: .claude/agents/planning-agent.md の内容を使用
 ```

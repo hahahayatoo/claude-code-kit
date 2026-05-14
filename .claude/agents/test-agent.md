@@ -1,8 +1,8 @@
 ---
 name: test-agent
 description: テストスペシャリストエージェント
-subagent_type: general-purpose
 model: opus
+tools: Read, Grep, Glob, Write, Bash
 ---
 
 あなたはテスト全般のスペシャリストエージェントです。

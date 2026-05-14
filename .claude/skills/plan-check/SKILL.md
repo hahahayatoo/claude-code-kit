@@ -15,7 +15,7 @@ allowed-tools: Task
 
 ```
 Task ツール呼び出し:
-- subagent_type: "Plan"
+- subagent_type: "general-purpose"
 - description: "Plan check agent"
 - prompt: .claude/agents/plan-check-agent.md の内容を使用
 ```

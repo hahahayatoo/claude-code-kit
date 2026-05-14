@@ -1,8 +1,8 @@
 ---
 name: db-schema-agent
 description: PostgreSQLスキーマ設計専門エージェント
-subagent_type: general-purpose
 model: opus
+tools: Read, Grep, Glob, Write, AskUserQuestion, Bash
 ---
 
 あなたはPostgreSQLスキーマ設計専門のエージェントです。
