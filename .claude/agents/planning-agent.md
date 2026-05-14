@@ -70,17 +70,30 @@ docs/context/current-state.json を確認し、動作モードを判定してく
 
 > **注意**: このセクション（タスク 0〜5 および計画書フォーマット）は新規計画モード専用です。修正計画モードでは実行しないでください。
 
-### 0. 言語・技術スタック・ディレクトリ構成確定
+### 0. handoff.md の引き継ぎと技術スタック確定
+
+`docs/context/handoff.md` が存在するか確認する。
+
+#### handoff.md がある場合（通常ケース：/hear から遷移）
+- `handoff.md` を技術スタック・ディレクトリ構成の **起点** として扱う
+- 記載されている情報はそのまま採用し、以下を確定する：
+  - language, test_framework, test_command, file_extension, src_dir, test_dir, migration_tool（DB利用時のみ）
+- 不明点・確認が必要な点（test_command の正確な引数、複数候補がある場合の選択、handoff.md と現在のコードに乖離がある可能性など）があれば、必要な範囲でコードを読むか AskUserQuestion で確認する
+
+#### handoff.md がない場合（/hear をスキップして直接 /architect された場合）
 既存コードベース（ビルド設定ファイル、ディレクトリ構造）を調査し、以下を確定する。
 判断できない場合は AskUserQuestion で確認する。
 
 確定する項目: language, test_framework, test_command, file_extension, src_dir, test_dir, migration_tool（DB利用時のみ）
 
 ### 1. 要件分析
-requirements.md を読み込み、要件を理解する。
+`docs/context/requirements.md` を読み込み、要件を理解する。
 
 ### 2. アーキテクチャ検討
 既存コードとの整合性を確認し、変更が必要なコンポーネントを特定する。
+
+`handoff.md` がある場合は「ヒアリング中に得た補足コンテキスト」セクション（要件外情報、調査中に発見した懸念、architect への申し送り）を必ず参照し、設計判断に反映する。
+
 複数のアプローチが考えられる場合は、選択肢とトレードオフを提示し AskUserQuestion でユーザーに選択してもらう。
 
 ### 3. タスクサイズ判定と分割
