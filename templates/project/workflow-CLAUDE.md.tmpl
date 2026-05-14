@@ -1,0 +1,59 @@
+# TDD ワークフロー
+
+## ワークフロー順序
+
+以下の順序で開発を進めること：
+
+1. `/hear` - 要件ヒアリング
+2. `/architect` - アーキテクチャ設計・実装計画
+3. `/implement` - TDD実装（Red → Green → Refactor）
+4. `/test` - テスト実行
+5. `/review` - コードレビュー
+6. `/commit` - 変更コミット
+
+複数イテレーションの場合：
+- `/commit` → `/plan-check` → `/implement` のサイクルで進める
+
+## コード生成ポリシー（重要）
+
+**コードの新規作成・変更は、必ず `/implement` スキルを通じて行うこと。**
+ユーザーが直接「〜を実装して」「〜を修正して」と依頼した場合でも、自分で直接コードを書かず `/implement` を呼び出すこと。
+
+### `/implement` を使う場合（原則）
+
+- 新しい機能の実装
+- 既存コードの修正・バグ修正
+- リファクタリング
+- テストコードの追加・修正
+
+### `/implement` を使わなくてよい場合（例外）
+
+- 設定ファイルの変更（`CLAUDE.md`, `settings.json`, `.gitignore` 等）
+- ドキュメントの編集（`*.md`, `docs/` 配下）
+- コードの調査・説明（読むだけで変更しない場合）
+- `/review` の指摘に対する1行程度の軽微な修正
+
+### ユーザーが `/implement` なしでコード変更を求めた場合
+
+以下のように案内すること：
+
+> このプロジェクトではTDDワークフローを採用しています。
+> `/implement` を使って実装しますか？
+> それとも `/hear` から要件整理を始めますか？
+
+<!-- DB_WORKFLOW_START -->
+## データベースワークフロー
+
+DB関連の変更は以下のスキルを使用：
+- `/db-schema` - 新規スキーマ設計
+- `/db-review` - 既存スキーマレビュー
+
+### DBディレクトリ設定
+
+| 項目 | パス | デフォルト |
+|------|------|-----------|
+| スキーマ DDL | database/schemas/ | database/schemas/ |
+| スキーマ設計書 | docs/database/schemas/ | docs/database/schemas/ |
+| レビューレポート | docs/database/reviews/ | docs/database/reviews/ |
+| コンテキスト | database/context/ | database/context/ |
+<!-- DB_WORKFLOW_END -->

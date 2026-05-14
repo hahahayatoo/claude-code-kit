@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(rm -rf *)",
+      "Read(.env*)",
+      "Read(**/secrets/**)",
+      "Edit(.env*)",
+      "Edit(.git/**)",
+      "Write(.env*)"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(npm publish*)",
+      "Bash(docker push*)"
+    ],
+    "allow": [
+      "Read",
+      "Grep",
+      "Glob",
+      "Task",
+      "Write",
+      "Edit",
+      "Bash(date*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git add *)",
+      "Bash(git log*)",
+      "Bash(git commit *)"
+    ]
+  }
+}

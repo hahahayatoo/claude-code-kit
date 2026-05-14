@@ -1,0 +1,776 @@
+#!/usr/bin/env bash
+
+# ソース実行の防止（exit 1 がターミナルごと終了するのを防ぐ）
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+  echo "[error] This script must be executed, not sourced. Use: claude-setup <command>" >&2
+  return 1 2>/dev/null || true
+fi
+
+set -euo pipefail
+
+# 予期しないエラー時のトラップ
+trap 'echo -e "\033[0;31m[error]\033[0m Unexpected error at line $LINENO" >&2; exit 1' ERR
+
+# claude-setup: Claude Code TDD ワークフロー セットアップ CLI
+# Usage: claude-setup <command> [options]
+
+VERSION="1.0.0"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+USER_CLAUDE_DIR="$HOME/.claude"
+META_FILE="$USER_CLAUDE_DIR/.claude-setup-meta.json"
+
+# --- Dynamic file discovery ---
+# Get all agent files from source directory
+# Args: $1 = include_db (true/false)
+get_agents() {
+  local include_db="${1:-false}"
+  local agents=()
+
+  if [[ -d "$REPO_DIR/.claude/agents" ]]; then
+    while IFS= read -r file; do
+      local basename
+      basename="$(basename "$file")"
+
+      # Skip DB agents if not including DB
+      if [[ "$basename" =~ ^db- ]] && [[ "$include_db" != "true" ]]; then
+        continue
+      fi
+
+      agents+=("$basename")
+    done < <(find "$REPO_DIR/.claude/agents" -maxdepth 1 -name "*.md" -type f | sort)
+  fi
+
+  [[ ${#agents[@]} -gt 0 ]] && printf '%s\n' "${agents[@]}" || true
+}
+
+# Get all skills from source directory
+# Args: $1 = include_db (true/false)
+get_skills() {
+  local include_db="${1:-false}"
+  local skills=()
+
+  if [[ -d "$REPO_DIR/.claude/skills" ]]; then
+    while IFS= read -r dir; do
+      local basename
+      basename="$(basename "$dir")"
+
+      # Skip DB skills if not including DB
+      if [[ "$basename" =~ ^db- ]] && [[ "$include_db" != "true" ]]; then
+        continue
+      fi
+
+      # Only include if SKILL.md exists
+      if [[ -f "$dir/SKILL.md" ]]; then
+        skills+=("$basename")
+      fi
+    done < <(find "$REPO_DIR/.claude/skills" -maxdepth 1 -type d ! -path "$REPO_DIR/.claude/skills" | sort)
+  fi
+
+  [[ ${#skills[@]} -gt 0 ]] && printf '%s\n' "${skills[@]}" || true
+}
+
+# Check if a file is DB-related based on naming convention
+is_db_component() {
+  local name="$1"
+  [[ "$name" =~ ^db- ]]
+}
+
+# --- Colors ---
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# --- Helpers ---
+info()  { echo -e "${BLUE}[info]${NC} $*"; }
+ok()    { echo -e "${GREEN}[ok]${NC} $*"; }
+warn()  { echo -e "${YELLOW}[warn]${NC} $*"; }
+error() { echo -e "${RED}[error]${NC} $*" >&2; }
+
+file_checksum() {
+  sha256sum "$1" 2>/dev/null | cut -d' ' -f1
+}
+
+# Compare source and destination files
+# Returns: "missing", "same", "modified"
+file_status() {
+  local src="$1" dst="$2"
+  if [[ ! -f "$dst" ]]; then
+    echo "missing"
+  elif [[ "$(file_checksum "$src")" == "$(file_checksum "$dst")" ]]; then
+    echo "same"
+  else
+    echo "modified"
+  fi
+}
+
+# Copy file with status reporting
+copy_file() {
+  local src="$1" dst="$2" force="${3:-false}" label="${4:-$dst}"
+  local status
+  status="$(file_status "$src" "$dst")"
+
+  case "$status" in
+    missing)
+      mkdir -p "$(dirname "$dst")"
+      cp "$src" "$dst"
+      echo -e "  ${GREEN}[installed]${NC} $label"
+      ;;
+    same)
+      echo -e "  [unchanged] $label"
+      ;;
+    modified)
+      if [[ "$force" == "true" ]]; then
+        cp "$src" "$dst"
+        echo -e "  ${YELLOW}[updated]${NC} $label (overwritten)"
+      else
+        echo -e "  ${YELLOW}[skip - locally modified]${NC} $label"
+      fi
+      ;;
+  esac
+}
+
+save_meta() {
+  local with_db="$1"
+  local checksums="{}"
+
+  # Build checksums for all installed agents
+  if [[ -d "$USER_CLAUDE_DIR/agents" ]]; then
+    while IFS= read -r file; do
+      local basename
+      basename="$(basename "$file")"
+      local cs
+      cs="$(file_checksum "$file")"
+      checksums=$(echo "$checksums" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+d['agents/$basename'] = '$cs'
+print(json.dumps(d))
+")
+    done < <(find "$USER_CLAUDE_DIR/agents" -maxdepth 1 -name "*.md" -type f 2>/dev/null || true)
+  fi
+
+  # Build checksum for CLAUDE.md
+  if [[ -f "$USER_CLAUDE_DIR/CLAUDE.md" ]]; then
+    local claude_cs
+    claude_cs="$(file_checksum "$USER_CLAUDE_DIR/CLAUDE.md")"
+    checksums=$(echo "$checksums" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+d['CLAUDE.md'] = '$claude_cs'
+print(json.dumps(d))
+")
+  fi
+
+  # Build checksums for all installed skills
+  if [[ -d "$USER_CLAUDE_DIR/skills" ]]; then
+    while IFS= read -r skill_file; do
+      local skill_dir
+      skill_dir="$(dirname "$skill_file")"
+      local skill_name
+      skill_name="$(basename "$skill_dir")"
+      local cs
+      cs="$(file_checksum "$skill_file")"
+      checksums=$(echo "$checksums" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+d['skills/$skill_name/SKILL.md'] = '$cs'
+print(json.dumps(d))
+")
+    done < <(find "$USER_CLAUDE_DIR/skills" -mindepth 2 -maxdepth 2 -name "SKILL.md" -type f 2>/dev/null || true)
+  fi
+
+  # Build meta JSON
+  python3 -c "
+import json, datetime
+meta = {
+    'version': '$VERSION',
+    'installed_at': datetime.datetime.now().isoformat(),
+    'with_db': $([[ "$with_db" == "true" ]] && echo "True" || echo "False"),
+    'checksums': $checksums
+}
+print(json.dumps(meta, indent=2))
+" > "$META_FILE"
+}
+
+# --- install command ---
+cmd_install() {
+  local with_db=false
+  local force=false
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --with-db) with_db=true; shift ;;
+      --force)   force=true; shift ;;
+      *) error "Unknown option: $1"; exit 1 ;;
+    esac
+  done
+
+  info "Installing Claude Code TDD workflow to $USER_CLAUDE_DIR ..."
+
+  # Verify source files exist
+  if [[ ! -d "$REPO_DIR/.claude/agents" ]]; then
+    error "Source agents not found at $REPO_DIR/.claude/agents"
+    exit 1
+  fi
+
+  # --- Agents ---
+  echo ""
+  echo "Agents:"
+  local agent_count=0
+  while IFS= read -r agent; do
+    [[ -z "$agent" ]] && continue
+    copy_file "$REPO_DIR/.claude/agents/$agent" "$USER_CLAUDE_DIR/agents/$agent" "$force" "agents/$agent"
+    agent_count=$((agent_count + 1))
+  done < <(get_agents "$with_db")
+
+  # --- Skills ---
+  echo ""
+  echo "Skills:"
+  local skill_count=0
+  while IFS= read -r skill; do
+    [[ -z "$skill" ]] && continue
+    local src_dir="$REPO_DIR/.claude/skills/$skill"
+    local dst_dir="$USER_CLAUDE_DIR/skills/$skill"
+    mkdir -p "$dst_dir"
+    copy_file "$src_dir/SKILL.md" "$dst_dir/SKILL.md" "$force" "skills/$skill/SKILL.md"
+    skill_count=$((skill_count + 1))
+  done < <(get_skills "$with_db")
+
+  # --- User-level CLAUDE.md ---
+  echo ""
+  echo "CLAUDE.md:"
+  copy_file "$REPO_DIR/templates/user/CLAUDE.md.tmpl" "$USER_CLAUDE_DIR/CLAUDE.md" "$force" "CLAUDE.md"
+
+  # --- Save metadata ---
+  save_meta "$with_db"
+
+  echo ""
+  ok "Installation complete!"
+  info "Installed: $agent_count agents, $skill_count skills"
+  if [[ "$with_db" == "true" ]]; then
+    info "(including DB components)"
+  fi
+  echo ""
+  info "Next: Run 'claude-setup init <project-dir>' to apply TDD workflow to a project."
+}
+
+# --- init command ---
+cmd_init() {
+  local project_dir=""
+  local with_db=false
+  local force=false
+
+  # Parse arguments
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --with-db)  with_db=true; shift ;;
+      --force)    force=true; shift ;;
+      -*)         error "Unknown option: $1"; exit 1 ;;
+      *)
+        if [[ -z "$project_dir" ]]; then
+          project_dir="$1"; shift
+        else
+          error "Unexpected argument: $1"; exit 1
+        fi
+        ;;
+    esac
+  done
+
+  # Default to current directory
+  if [[ -z "$project_dir" ]]; then
+    project_dir="$(pwd)"
+  fi
+
+  # Resolve to absolute path
+  project_dir="$(cd "$project_dir" 2>/dev/null && pwd)" || {
+    error "Directory not found: $project_dir"
+    exit 1
+  }
+
+  # Check user-level installation
+  if [[ ! -d "$USER_CLAUDE_DIR/agents" ]]; then
+    error "User-level agents not found. Run 'claude-setup install' first."
+    exit 1
+  fi
+
+  info "Initializing TDD workflow in $project_dir ..."
+
+  # --- Generate .claude/settings.json ---
+  local settings_dst="$project_dir/.claude/settings.json"
+  echo ""
+  echo "Settings:"
+  if [[ -f "$settings_dst" ]] && [[ "$force" != "true" ]]; then
+    echo -e "  ${YELLOW}[skip - exists]${NC} .claude/settings.json"
+  else
+    mkdir -p "$project_dir/.claude"
+    cp "$REPO_DIR/templates/project/settings.json.tmpl" "$settings_dst"
+    if [[ "$force" == "true" ]] && [[ -f "$settings_dst" ]]; then
+      echo -e "  ${YELLOW}[updated]${NC} .claude/settings.json (overwritten)"
+    else
+      echo -e "  ${GREEN}[created]${NC} .claude/settings.json"
+    fi
+  fi
+
+  # --- Generate .claude/CLAUDE.md (Tier 2: workflow) ---
+  local workflow_md_dst="$project_dir/.claude/CLAUDE.md"
+  echo ""
+  echo "Workflow CLAUDE.md:"
+  if [[ -f "$workflow_md_dst" ]] && [[ "$force" != "true" ]]; then
+    echo -e "  ${YELLOW}[skip - exists]${NC} .claude/CLAUDE.md"
+  else
+    mkdir -p "$project_dir/.claude"
+    if [[ "$with_db" == "true" ]]; then
+      # DBセクションのマーカーコメントだけ除去し、内容は残す
+      sed '/<!-- DB_WORKFLOW_START -->/d; /<!-- DB_WORKFLOW_END -->/d' \
+        "$REPO_DIR/templates/project/workflow-CLAUDE.md.tmpl" > "$workflow_md_dst"
+    else
+      # DBセクションごと除去
+      sed '/<!-- DB_WORKFLOW_START -->/,/<!-- DB_WORKFLOW_END -->/d' \
+        "$REPO_DIR/templates/project/workflow-CLAUDE.md.tmpl" > "$workflow_md_dst"
+    fi
+    if [[ "$force" == "true" ]]; then
+      echo -e "  ${YELLOW}[updated]${NC} .claude/CLAUDE.md (overwritten)"
+    else
+      echo -e "  ${GREEN}[created]${NC} .claude/CLAUDE.md"
+    fi
+  fi
+
+  # --- Generate CLAUDE.md (Tier 3: project) ---
+  local claude_md_dst="$project_dir/CLAUDE.md"
+  echo ""
+  echo "Project CLAUDE.md:"
+  if [[ -f "$claude_md_dst" ]] && [[ "$force" != "true" ]]; then
+    echo -e "  ${YELLOW}[skip - exists]${NC} CLAUDE.md"
+  else
+    cp "$REPO_DIR/templates/project/CLAUDE.md.tmpl" "$claude_md_dst"
+    if [[ "$force" == "true" ]]; then
+      echo -e "  ${YELLOW}[updated]${NC} CLAUDE.md (overwritten)"
+    else
+      echo -e "  ${GREEN}[created]${NC} CLAUDE.md"
+    fi
+  fi
+
+  # --- Create directories ---
+  echo ""
+  echo "Directories:"
+  local dirs=(
+    "docs/context"
+    "docs/plans"
+  )
+
+  if [[ "$with_db" == "true" ]]; then
+    dirs+=(
+      "database/schemas"
+      "database/migrations"
+      "database/context"
+      "docs/database/schemas"
+      "docs/database/reviews"
+      "docs/database/migrations"
+    )
+  fi
+
+  for dir in "${dirs[@]}"; do
+    local full_path="$project_dir/$dir"
+    if [[ -d "$full_path" ]]; then
+      echo -e "  [exists] $dir/"
+    else
+      mkdir -p "$full_path"
+      echo -e "  ${GREEN}[created]${NC} $dir/"
+    fi
+    # Add .gitkeep if directory is empty
+    if [[ -z "$(ls -A "$full_path" 2>/dev/null)" ]]; then
+      touch "$full_path/.gitkeep"
+    fi
+  done
+
+  echo ""
+  ok "Project initialized!"
+  echo ""
+  info "Next steps:"
+  echo "  1. Review and customize CLAUDE.md"
+  echo "  2. Review .claude/settings.json"
+  echo "  3. Start Claude Code and use /hear to begin"
+  echo "  (Source/test directories will be configured during /architect)"
+}
+
+# --- update command ---
+cmd_update() {
+  local force=false
+  local add_db=false
+  local remove_db=false
+  local cleanup=false
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --force)     force=true; shift ;;
+      --add-db)    add_db=true; shift ;;
+      --remove-db) remove_db=true; shift ;;
+      --cleanup)   cleanup=true; shift ;;
+      *) error "Unknown option: $1"; exit 1 ;;
+    esac
+  done
+
+  if [[ "$add_db" == "true" ]] && [[ "$remove_db" == "true" ]]; then
+    error "Cannot use --add-db and --remove-db together"
+    exit 1
+  fi
+
+  if [[ ! -f "$META_FILE" ]]; then
+    error "No installation found. Run 'claude-setup install' first."
+    exit 1
+  fi
+
+  # Read current meta
+  local current_with_db
+  current_with_db=$(python3 -c "import json; print(json.load(open('$META_FILE')).get('with_db', False))")
+
+  # Determine what to install
+  local with_db="$current_with_db"
+  if [[ "$add_db" == "true" ]]; then
+    with_db="True"
+  elif [[ "$remove_db" == "true" ]]; then
+    with_db="False"
+  fi
+
+  # Convert to bash boolean
+  local with_db_bool
+  [[ "$with_db" == "True" ]] && with_db_bool="true" || with_db_bool="false"
+
+  info "Updating Claude Code TDD workflow ..."
+
+  # --- Agents ---
+  echo ""
+  echo "Agents:"
+
+  # Update/install agents from source
+  while IFS= read -r agent; do
+    [[ -z "$agent" ]] && continue
+    local src="$REPO_DIR/.claude/agents/$agent"
+    local dst="$USER_CLAUDE_DIR/agents/$agent"
+
+    # Check if file was locally modified (compare with meta checksum)
+    local meta_cs=""
+    if [[ -f "$META_FILE" ]]; then
+      meta_cs=$(python3 -c "import json; print(json.load(open('$META_FILE')).get('checksums', {}).get('agents/$agent', ''))" 2>/dev/null || true)
+    fi
+    local current_cs=""
+    if [[ -f "$dst" ]]; then
+      current_cs="$(file_checksum "$dst")"
+    fi
+    local src_cs
+    src_cs="$(file_checksum "$src")"
+
+    if [[ ! -f "$dst" ]]; then
+      mkdir -p "$(dirname "$dst")"
+      cp "$src" "$dst"
+      echo -e "  ${GREEN}[installed]${NC} agents/$agent"
+    elif [[ "$src_cs" == "$current_cs" ]]; then
+      echo -e "  [unchanged] agents/$agent"
+    elif [[ -n "$meta_cs" ]] && [[ "$meta_cs" == "$current_cs" ]]; then
+      # Not locally modified, safe to update
+      cp "$src" "$dst"
+      echo -e "  ${GREEN}[updated]${NC} agents/$agent"
+    elif [[ "$force" == "true" ]]; then
+      cp "$src" "$dst"
+      echo -e "  ${YELLOW}[updated]${NC} agents/$agent (overwritten)"
+    else
+      echo -e "  ${YELLOW}[skip - locally modified]${NC} agents/$agent"
+    fi
+  done < <(get_agents "$with_db_bool")
+
+  # Remove agents that are no longer in source (if cleanup is enabled or remove_db is true)
+  if [[ "$cleanup" == "true" ]] || [[ "$remove_db" == "true" ]]; then
+    if [[ -d "$USER_CLAUDE_DIR/agents" ]]; then
+      while IFS= read -r installed_file; do
+        local basename
+        basename="$(basename "$installed_file")"
+        local src_file="$REPO_DIR/.claude/agents/$basename"
+
+        # Check if this should be removed
+        local should_remove=false
+        if [[ "$remove_db" == "true" ]] && is_db_component "$basename"; then
+          should_remove=true
+        elif [[ "$cleanup" == "true" ]] && [[ ! -f "$src_file" ]]; then
+          should_remove=true
+        elif [[ "$cleanup" == "true" ]] && [[ "$with_db_bool" == "false" ]] && is_db_component "$basename"; then
+          should_remove=true
+        fi
+
+        if [[ "$should_remove" == "true" ]]; then
+          rm "$installed_file"
+          echo -e "  ${RED}[removed]${NC} agents/$basename"
+        fi
+      done < <(find "$USER_CLAUDE_DIR/agents" -maxdepth 1 -name "*.md" -type f 2>/dev/null || true)
+    fi
+  fi
+
+  # --- Skills ---
+  echo ""
+  echo "Skills:"
+
+  # Update/install skills from source
+  while IFS= read -r skill; do
+    [[ -z "$skill" ]] && continue
+    local src="$REPO_DIR/.claude/skills/$skill/SKILL.md"
+    local dst="$USER_CLAUDE_DIR/skills/$skill/SKILL.md"
+
+    mkdir -p "$USER_CLAUDE_DIR/skills/$skill"
+    local meta_cs=""
+    if [[ -f "$META_FILE" ]]; then
+      meta_cs=$(python3 -c "import json; print(json.load(open('$META_FILE')).get('checksums', {}).get('skills/$skill/SKILL.md', ''))" 2>/dev/null || true)
+    fi
+    local current_cs=""
+    if [[ -f "$dst" ]]; then
+      current_cs="$(file_checksum "$dst")"
+    fi
+    local src_cs
+    src_cs="$(file_checksum "$src")"
+
+    if [[ ! -f "$dst" ]]; then
+      mkdir -p "$(dirname "$dst")"
+      cp "$src" "$dst"
+      echo -e "  ${GREEN}[installed]${NC} skills/$skill/SKILL.md"
+    elif [[ "$src_cs" == "$current_cs" ]]; then
+      echo -e "  [unchanged] skills/$skill/SKILL.md"
+    elif [[ -n "$meta_cs" ]] && [[ "$meta_cs" == "$current_cs" ]]; then
+      cp "$src" "$dst"
+      echo -e "  ${GREEN}[updated]${NC} skills/$skill/SKILL.md"
+    elif [[ "$force" == "true" ]]; then
+      cp "$src" "$dst"
+      echo -e "  ${YELLOW}[updated]${NC} skills/$skill/SKILL.md (overwritten)"
+    else
+      echo -e "  ${YELLOW}[skip - locally modified]${NC} skills/$skill/SKILL.md"
+    fi
+  done < <(get_skills "$with_db_bool")
+
+  # Remove skills that are no longer in source (if cleanup is enabled or remove_db is true)
+  if [[ "$cleanup" == "true" ]] || [[ "$remove_db" == "true" ]]; then
+    if [[ -d "$USER_CLAUDE_DIR/skills" ]]; then
+      while IFS= read -r installed_dir; do
+        local skill_name
+        skill_name="$(basename "$installed_dir")"
+        local src_dir="$REPO_DIR/.claude/skills/$skill_name"
+
+        # Check if this should be removed
+        local should_remove=false
+        if [[ "$remove_db" == "true" ]] && is_db_component "$skill_name"; then
+          should_remove=true
+        elif [[ "$cleanup" == "true" ]] && [[ ! -d "$src_dir" || ! -f "$src_dir/SKILL.md" ]]; then
+          should_remove=true
+        elif [[ "$cleanup" == "true" ]] && [[ "$with_db_bool" == "false" ]] && is_db_component "$skill_name"; then
+          should_remove=true
+        fi
+
+        if [[ "$should_remove" == "true" ]]; then
+          rm -rf "$installed_dir"
+          echo -e "  ${RED}[removed]${NC} skills/$skill_name/"
+        fi
+      done < <(find "$USER_CLAUDE_DIR/skills" -mindepth 1 -maxdepth 1 -type d 2>/dev/null || true)
+    fi
+  fi
+
+  # --- User-level CLAUDE.md ---
+  echo ""
+  echo "CLAUDE.md:"
+  local claude_src="$REPO_DIR/templates/user/CLAUDE.md.tmpl"
+  local claude_dst="$USER_CLAUDE_DIR/CLAUDE.md"
+  local claude_meta_cs=""
+  if [[ -f "$META_FILE" ]]; then
+    claude_meta_cs=$(python3 -c "import json; print(json.load(open('$META_FILE')).get('checksums', {}).get('CLAUDE.md', ''))" 2>/dev/null || true)
+  fi
+  local claude_current_cs=""
+  if [[ -f "$claude_dst" ]]; then
+    claude_current_cs="$(file_checksum "$claude_dst")"
+  fi
+  local claude_src_cs
+  claude_src_cs="$(file_checksum "$claude_src")"
+
+  if [[ ! -f "$claude_dst" ]]; then
+    cp "$claude_src" "$claude_dst"
+    echo -e "  ${GREEN}[installed]${NC} CLAUDE.md"
+  elif [[ "$claude_src_cs" == "$claude_current_cs" ]]; then
+    echo -e "  [unchanged] CLAUDE.md"
+  elif [[ -n "$claude_meta_cs" ]] && [[ "$claude_meta_cs" == "$claude_current_cs" ]]; then
+    cp "$claude_src" "$claude_dst"
+    echo -e "  ${GREEN}[updated]${NC} CLAUDE.md"
+  elif [[ "$force" == "true" ]]; then
+    cp "$claude_src" "$claude_dst"
+    echo -e "  ${YELLOW}[updated]${NC} CLAUDE.md (overwritten)"
+  else
+    echo -e "  ${YELLOW}[skip - locally modified]${NC} CLAUDE.md"
+  fi
+
+  # Update metadata
+  save_meta "$with_db_bool"
+
+  echo ""
+  ok "Update complete!"
+}
+
+# --- status command ---
+cmd_status() {
+  echo "Claude Code TDD Workflow Status"
+  echo "================================"
+  echo ""
+
+  # Check user-level installation
+  if [[ -f "$META_FILE" ]]; then
+    local version installed_at with_db
+    version=$(python3 -c "import json; print(json.load(open('$META_FILE')).get('version', 'unknown'))")
+    installed_at=$(python3 -c "import json; print(json.load(open('$META_FILE')).get('installed_at', 'unknown'))")
+    with_db=$(python3 -c "import json; print(json.load(open('$META_FILE')).get('with_db', False))")
+
+    echo -e "User-level installation: ${GREEN}installed${NC}"
+    echo "  Version: $version"
+    echo "  Installed: $installed_at"
+    echo "  DB components: $with_db"
+    if [[ -f "$USER_CLAUDE_DIR/CLAUDE.md" ]]; then
+      echo -e "  CLAUDE.md: ${GREEN}[ok]${NC}"
+    else
+      echo -e "  CLAUDE.md: ${YELLOW}[missing]${NC}"
+    fi
+  else
+    echo -e "User-level installation: ${RED}not installed${NC}"
+    echo ""
+    info "Run 'claude-setup install' to install."
+    return
+  fi
+
+  echo ""
+
+  # Check agents
+  echo "Agents:"
+  local agent_count=0
+  local db_agent_count=0
+
+  if [[ -d "$USER_CLAUDE_DIR/agents" ]]; then
+    while IFS= read -r agent_file; do
+      local basename
+      basename="$(basename "$agent_file")"
+      if is_db_component "$basename"; then
+        echo -e "  ${GREEN}[ok]${NC} $basename (db)"
+        db_agent_count=$((db_agent_count + 1))
+      else
+        echo -e "  ${GREEN}[ok]${NC} $basename"
+        agent_count=$((agent_count + 1))
+      fi
+    done < <(find "$USER_CLAUDE_DIR/agents" -maxdepth 1 -name "*.md" -type f 2>/dev/null | sort || true)
+  fi
+
+  if [[ $agent_count -eq 0 ]] && [[ $db_agent_count -eq 0 ]]; then
+    echo -e "  ${RED}[none installed]${NC}"
+  fi
+
+  echo ""
+
+  # Check skills
+  echo "Skills:"
+  local skill_count=0
+  local db_skill_count=0
+
+  if [[ -d "$USER_CLAUDE_DIR/skills" ]]; then
+    while IFS= read -r skill_dir; do
+      local skill_name
+      skill_name="$(basename "$skill_dir")"
+      if [[ -f "$skill_dir/SKILL.md" ]]; then
+        if is_db_component "$skill_name"; then
+          echo -e "  ${GREEN}[ok]${NC} $skill_name (db)"
+          db_skill_count=$((db_skill_count + 1))
+        else
+          echo -e "  ${GREEN}[ok]${NC} $skill_name"
+          skill_count=$((skill_count + 1))
+        fi
+      fi
+    done < <(find "$USER_CLAUDE_DIR/skills" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort || true)
+  fi
+
+  if [[ $skill_count -eq 0 ]] && [[ $db_skill_count -eq 0 ]]; then
+    echo -e "  ${RED}[none installed]${NC}"
+  fi
+
+  echo ""
+
+  # Check current project
+  if [[ -f ".claude/settings.json" ]] || [[ -f "CLAUDE.md" ]] || [[ -f ".claude/CLAUDE.md" ]]; then
+    echo "Current project ($(pwd)):"
+    if [[ -f ".claude/settings.json" ]]; then
+      echo -e "  ${GREEN}[ok]${NC} .claude/settings.json"
+    else
+      echo -e "  ${RED}[missing]${NC} .claude/settings.json"
+    fi
+    if [[ -f ".claude/CLAUDE.md" ]]; then
+      echo -e "  ${GREEN}[ok]${NC} .claude/CLAUDE.md (workflow)"
+    else
+      echo -e "  ${RED}[missing]${NC} .claude/CLAUDE.md (workflow)"
+    fi
+    if [[ -f "CLAUDE.md" ]]; then
+      echo -e "  ${GREEN}[ok]${NC} CLAUDE.md (project)"
+    else
+      echo -e "  ${RED}[missing]${NC} CLAUDE.md (project)"
+    fi
+  fi
+}
+
+# --- Usage ---
+usage() {
+  cat <<EOF
+claude-setup v$VERSION - Claude Code TDD Workflow Setup
+
+Usage:
+  claude-setup <command> [options]
+
+Commands:
+  install [--with-db] [--force]                        Install agents/skills/hooks to ~/.claude/
+  init [DIR] [OPTIONS]                                 Initialize TDD workflow in a project
+  update [--force] [--add-db|--remove-db] [--cleanup]  Update user-level files
+  status                                               Show installation status
+
+Update Options:
+  --force                           Overwrite locally modified files
+  --add-db                          Add DB components
+  --remove-db                       Remove DB components
+  --cleanup                         Remove files that no longer exist in source
+
+Init Options:
+  --with-db                         Include DB workflow directories
+  --force                           Overwrite existing files
+
+Examples:
+  claude-setup install --with-db
+  claude-setup init /path/to/project
+  claude-setup update --cleanup
+  claude-setup update --add-db
+  claude-setup status
+EOF
+}
+
+# --- Main ---
+main() {
+  if [[ $# -eq 0 ]]; then
+    usage
+    exit 0
+  fi
+
+  local cmd="$1"
+  shift
+
+  case "$cmd" in
+    install) cmd_install "$@" ;;
+    init)    cmd_init "$@" ;;
+    update)  cmd_update "$@" ;;
+    status)  cmd_status ;;
+    help|--help|-h) usage ;;
+    version|--version|-v) echo "claude-setup v$VERSION" ;;
+    *)
+      error "Unknown command: $cmd"
+      echo ""
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

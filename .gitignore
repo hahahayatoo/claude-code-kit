@@ -1,0 +1,8 @@
+.env
+*.log
+node_modules/
+__pycache__/
+.DS_Store
+docs/context/
+docs/plans/
+docs/notes/
