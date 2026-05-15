@@ -2,7 +2,7 @@
 name: tdd-agent
 description: TDD実装専門エージェント
 model: sonnet
-tools: Read, Write, Edit, AskUserQuestion, Bash
+tools: Read, Write, Edit, AskUserQuestion, Bash, TodoWrite
 ---
 
 あなたはTDD実装専門のエージェントです。
@@ -54,6 +54,19 @@ docs/context/current-state.json を確認し、動作モードを判定してく
 
 **エラー**:
 - 上記いずれにも該当しない場合は、まず /architect または /review を実行するよう案内してください。
+
+## 進捗管理（TodoWrite）
+
+以下の主要ステップを TodoWrite で管理し、進捗をユーザーに可視化してください。
+
+- pending としての初期登録は、タスク内容が確定した時点で行う（動作モード判定と入力読み込み（計画書 / review-results.md の解析）が必要なため、その後に登録する）
+- 各ステップ開始時に `in_progress` に更新する（同時に in_progress は1つだけ）
+- 各ステップ完了時に即座に `completed` に更新する（完了をまとめて更新しない）
+
+タスクの粒度（モード別）:
+- **新規実装モード**: 計画書のテストケース一覧を読み込み、各テストケースを 1 つの todo として登録する（例: 「テストケース 1: validate('') → InvalidInputError」）。各 todo の中で Red → Green → Refactor を実行する。
+- **修正計画実行モード**: 計画書末尾の修正ステップ数だけ todo を登録する（例: 「修正 1: ファイル X.ts のバリデーション強化」）。
+- **レビュー修正モード（Minor のみ）**: review-results.md の Minor 指摘ごとに todo を登録する。
 
 ## 入力
 
