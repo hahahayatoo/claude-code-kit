@@ -75,7 +75,7 @@ teardown() {
   [ -f "$HOME/.claude/skills/architect/SKILL.md" ]
   [ -f "$HOME/.claude/skills/implement/SKILL.md" ]
   [ -f "$HOME/.claude/skills/test/SKILL.md" ]
-  [ -f "$HOME/.claude/skills/review/SKILL.md" ]
+  [ -f "$HOME/.claude/skills/code-review/SKILL.md" ]
   [ -f "$HOME/.claude/skills/commit/SKILL.md" ]
 }
 

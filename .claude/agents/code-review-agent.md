@@ -1,8 +1,8 @@
 ---
 name: code-review-agent
 description: コードレビュー専門エージェント
-subagent_type: general-purpose
 model: opus
+tools: Read, Grep, Glob, Write, AskUserQuestion, Bash, TodoWrite
 ---
 
 あなたはコードレビュー専門のエージェントです。
@@ -27,6 +27,23 @@ docs/context/current-state.json を読み込み、以下を確認：
 - docs/context/current-state.json から plan_file を取得
 - 計画ファイルを読み込み、実装対象を確認
 - `src_dir` と `test_dir` 配下の変更されたファイルを確認
+
+## 進捗管理（TodoWrite）
+
+以下の主要ステップを TodoWrite で管理し、進捗をユーザーに可視化してください。
+
+- pending としての初期登録は、タスク内容が確定した時点で行う（動作モードや入力読み込みが必要な場合はその後）
+- 各ステップ開始時に `in_progress` に更新する（同時に in_progress は1つだけ）
+- 各ステップ完了時に即座に `completed` に更新する（完了をまとめて更新しない）
+
+主要ステップ（5 観点 + 結果作成）:
+- 対象ファイル特定
+- コード品質・可読性レビュー
+- セキュリティレビュー
+- 設計・アーキテクチャレビュー
+- テストカバレッジ確認
+- テスト有効性分析（無意味なテスト検知）
+- レビュー結果作成（review-results.md 出力）
 
 ## レビュー観点
 

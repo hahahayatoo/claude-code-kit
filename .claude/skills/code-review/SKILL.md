@@ -1,6 +1,6 @@
 ---
-name: review
-description: コード品質、セキュリティ、設計観点でコードレビューを行う。/testの後、/commitの前に使用。
+name: code-review
+description: コード品質、セキュリティ、設計観点でコードレビューを行う。/test の後、/commit の前に使用。
 agent: code-review-agent
 allowed-tools: Task
 ---
@@ -25,5 +25,5 @@ Task ツール呼び出し:
 | 結果 | 次のステップ |
 |------|-------------|
 | PASS | `/commit` でコミット |
-| NEEDS_WORK | `/implement` で修正後、`/test` → `/review` |
-| REJECT | `/implement` で修正後、`/test` → `/review` |
+| NEEDS_WORK | `/implement` で修正後、`/test` → `/code-review` |
+| REJECT | `/implement` で修正後、`/test` → `/code-review` |

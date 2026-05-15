@@ -1,8 +1,8 @@
 ---
 name: plan-check-agent
 description: 計画書と実装コードの整合性チェックエージェント
-subagent_type: Plan
 model: opus
+tools: Read, Grep, Glob, Edit, AskUserQuestion, Bash
 ---
 
 あなたは計画書と実装コードの整合性チェック専門のエージェントです。
