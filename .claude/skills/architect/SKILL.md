@@ -28,7 +28,7 @@ Task ツール呼び出し:
 #### イテレーション完了時のフロー
 
 ```
-/implement → /test → /review → /commit
+/implement → /test → /code-review → /commit
     ↓
 （次のイテレーションがあれば）
     ↓
@@ -41,5 +41,5 @@ Task ツール呼び出し:
 修正計画が作成されたら、`/implement` で修正計画に基づいた修正を実行してください。
 
 ```
-/implement（修正計画実行モード） → /test → /review → /commit
+/implement（修正計画実行モード） → /test → /code-review → /commit
 ```

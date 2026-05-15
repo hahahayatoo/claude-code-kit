@@ -58,13 +58,13 @@ claude-setup status
 `install` + `init` 後のプロジェクトで Claude Code を起動すると、以下のスキルが使える:
 
 ```
-/hear        要件ヒアリング
-/architect   アーキテクチャ設計・実装計画（言語・技術スタック決定を含む）
-/implement   TDD実装（Red → Green → Refactor）
-/test        テスト実行
-/review      コードレビュー
-/commit      変更コミット
-/plan-check  計画と実装の整合性チェック（複数イテレーション時）
+/hear         要件ヒアリング（コードベース調査+補足コンテキストを handoff.md に出力）
+/architect    アーキテクチャ設計・実装計画（言語・技術スタック決定を含む）
+/implement    TDD実装（Red → Green → Refactor）
+/test         テスト実行
+/code-review  コードレビュー
+/commit       変更コミット
+/plan-check   計画と実装の整合性チェック（複数イテレーション時）
 ```
 
 DB ワークフロー（`--with-db` 時）:

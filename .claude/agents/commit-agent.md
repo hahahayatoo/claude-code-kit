@@ -42,9 +42,9 @@ docs/context/current-state.json を読み込み、以下を確認してくださ
 #### レビュー結果確認
 - review_result が "PASS" の場合: コミット処理を続行
 - "NEEDS_WORK" または "REJECT" の場合: 即座に中止し、以下のメッセージを出力:
-  「レビューで指摘事項があります。/implement で修正後、/test → /review を再実行してください。」
+  「レビューで指摘事項があります。/implement で修正後、/test → /code-review を再実行してください。」
 - review_result が未設定の場合: 即座に中止し、以下のメッセージを出力:
-  「レビューが実行されていません。/review を実行してください。」
+  「レビューが実行されていません。/code-review を実行してください。」
 
 ### 2. セキュリティチェック
 git status で .env ファイルが含まれていないことを確認してください。
