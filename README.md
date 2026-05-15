@@ -42,10 +42,35 @@ claude-setup update
 # ローカル変更を上書き
 claude-setup update --force
 
+# 削除されたエージェント/スキルをクリーンアップ
+claude-setup update --cleanup
+
 # DB コンポーネントの追加・削除
 claude-setup update --add-db
 claude-setup update --remove-db
 ```
+
+#### このリポジトリを修正したとき、適用済み環境で何をすればよいか
+
+修正内容に応じて、以下のコマンドを実行してください。
+
+| 修正したファイル | 必要な操作 | 備考 |
+|---|---|---|
+| `.claude/agents/*.md` の **追加・編集** | `claude-setup update` | `~/.claude/agents/` に反映 |
+| `.claude/agents/*.md` の **削除・改名** | `claude-setup update --cleanup` | 旧ファイルを `~/.claude/agents/` から削除 |
+| `.claude/skills/*/SKILL.md` の **追加・編集** | `claude-setup update` | `~/.claude/skills/` に反映 |
+| `.claude/skills/*/` の **削除・改名** | `claude-setup update --cleanup` | 旧ディレクトリを `~/.claude/skills/` から削除 |
+| `templates/user/CLAUDE.md.tmpl` | `claude-setup update` | `~/.claude/CLAUDE.md` に反映 |
+| `templates/project/CLAUDE.md.tmpl`（Tier 3） | 各プロジェクトで `claude-setup init --force` | プロジェクト直下の `CLAUDE.md` を再生成（ローカル変更は上書きされる） |
+| `templates/project/workflow-CLAUDE.md.tmpl`（Tier 2） | 各プロジェクトで `claude-setup init --force` | `<project>/.claude/CLAUDE.md` を再生成 |
+| `templates/project/settings.json.tmpl` | 各プロジェクトで `claude-setup init --force` | `<project>/.claude/settings.json` を再生成 |
+| `bin/claude-setup` | 何もしなくて OK | 次回コマンド実行時に新しいバージョンが効く |
+
+注意点:
+
+- `claude-setup update` はローカル変更（`~/.claude/` 配下で手で編集したファイル）を **skip** します。上書きしたい場合は `--force` を付けてください。
+- `claude-setup init --force` はローカルカスタマイズを上書きします。プロジェクトテンプレートを編集している場合は、事前に差分を確認してマージしてください。
+- 何が変わるか確認したい場合は、まず `git log --oneline` でこのリポジトリの変更履歴を確認することを推奨します。
 
 ### 4. 状態確認
 
