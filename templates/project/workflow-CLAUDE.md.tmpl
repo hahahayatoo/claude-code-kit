@@ -44,16 +44,18 @@
 <!-- DB_WORKFLOW_START -->
 ## データベースワークフロー
 
-DB関連の変更は以下のスキルを使用：
-- `/db-schema` - 新規スキーマ設計
-- `/db-review` - 既存スキーマレビュー
+DB スキーマの **設計** は `/architect` で行います（DB 専用の設計エージェントは持ちません）。
+既存スキーマの **レビュー** だけ専門スキルを提供します。
+
+- `/db-review` - 既存スキーマレビュー（PostgreSQL / MySQL / SQLite に対応）
+
+対象 RDBMS は CLAUDE.md / requirements.md の記述、または DDL の特徴から自動判定されます。判定不可の場合は確認されます。
 
 ### DBディレクトリ設定
 
 | 項目 | パス | デフォルト |
 |------|------|-----------|
 | スキーマ DDL | database/schemas/ | database/schemas/ |
-| スキーマ設計書 | docs/database/schemas/ | docs/database/schemas/ |
 | レビューレポート | docs/database/reviews/ | docs/database/reviews/ |
 | コンテキスト | database/context/ | database/context/ |
 <!-- DB_WORKFLOW_END -->

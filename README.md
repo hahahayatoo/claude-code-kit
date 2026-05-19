@@ -95,9 +95,10 @@ claude-setup status
 DB ワークフロー（`--with-db` 時）:
 
 ```
-/db-schema   PostgreSQL スキーマ設計
-/db-review   スキーマレビュー
+/db-review   RDBMS スキーマレビュー（PostgreSQL / MySQL / SQLite に対応）
 ```
+
+DB スキーマの新規設計は `/architect` で行う（DB 専用の設計スキルは持たない）。
 
 ## 言語・テストフレームワーク
 
