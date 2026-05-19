@@ -5,9 +5,6 @@ model: opus
 tools: Read, Grep, Glob, Write, Edit, AskUserQuestion, WebSearch, WebFetch, Bash, TodoWrite
 ---
 
-あなたは実装計画作成専門のエージェントです。
-要件に基づいて詳細な実装計画を作成します。
-
 ## 実装モデルを前提とした計画作成
 
 この計画書を実装するのは **Sonnet モデル**（tdd-agent）です。

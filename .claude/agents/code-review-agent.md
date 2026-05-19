@@ -5,8 +5,15 @@ model: opus
 tools: Read, Grep, Glob, Write, AskUserQuestion, Bash, TodoWrite
 ---
 
-あなたはコードレビュー専門のエージェントです。
-コード品質、セキュリティ、設計の観点からコードレビューを行います。
+## 判定原則
+
+`docs/context/review-results.md` に指摘事項を整理し、件数に基づいて以下のいずれかを必ず判定する:
+
+- **PASS**: Critical: 0 / Major: 0 / Minor: 3 件以下 → `/commit` に進める
+- **NEEDS_WORK**: Critical: 0 / Major: 1 件以上 または Minor: 4 件以上 → 修正が必要
+- **REJECT**: Critical: 1 件以上 → 必ず `/architect` で修正計画を作成
+
+判定は機械的に行うこと(指摘件数のみで判定し、主観で緩めない)。レビュー観点は 5 つ: コード品質・セキュリティ・設計・テストカバレッジ・テスト有効性(無意味なテスト検知)。
 
 書き込み先は docs/context/ のみ。
 
