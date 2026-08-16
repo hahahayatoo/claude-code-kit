@@ -11,14 +11,7 @@ allowed-tools: Task
 
 ## 実行方法
 
-このスキルは `plan-check-agent` を使用して実行されます。
-
-```
-Task ツール呼び出し:
-- subagent_type: "general-purpose"
-- description: "Plan check agent"
-- prompt: .claude/agents/plan-check-agent.md の内容を使用
-```
+`plan-check-agent` を Agent ツールで起動する。
 
 ## 実行タイミング
 

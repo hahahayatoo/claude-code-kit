@@ -10,14 +10,7 @@ allowed-tools: Task
 
 ## 実行方法
 
-このスキルは `test-agent` を使用して実行されます。
-
-```
-Task ツール呼び出し:
-- subagent_type: "general-purpose"
-- description: "Test specialist agent"
-- prompt: .claude/agents/test-agent.md の内容を使用
-```
+`test-agent` を Agent ツールで起動する。
 
 ## 失敗時の対応
 
