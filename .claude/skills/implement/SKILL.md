@@ -11,14 +11,7 @@ Red → Green → Refactor のサイクルで実装します。
 
 ## 実行方法
 
-このスキルは `tdd-agent` を使用して実行されます。
-
-```
-Task ツール呼び出し:
-- subagent_type: "general-purpose"
-- description: "TDD implementation agent"
-- prompt: .claude/agents/tdd-agent.md の内容を使用
-```
+`tdd-agent` を Agent ツールで起動する。
 
 ## 次のステップ
 

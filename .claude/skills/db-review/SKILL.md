@@ -13,14 +13,7 @@ allowed-tools: Task
 
 ## 実行方法
 
-このスキルは `db-review-agent` を使用して実行されます。
-
-```
-Task ツール呼び出し:
-- subagent_type: "general-purpose"
-- description: "RDBMS schema review agent"
-- prompt: .claude/agents/db-review-agent.md の内容を使用
-```
+`db-review-agent` を Agent ツールで起動する。
 
 ## 次のステップ
 

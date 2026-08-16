@@ -11,14 +11,7 @@ allowed-tools: Task
 
 ## 実行方法
 
-このスキルは `code-review-agent` を使用して実行されます。
-
-```
-Task ツール呼び出し:
-- subagent_type: "general-purpose"
-- description: "Code review agent"
-- prompt: .claude/agents/code-review-agent.md の内容を使用
-```
+`code-review-agent` を Agent ツールで起動する。
 
 ## レビュー結果による次のステップ
 
