@@ -85,6 +85,11 @@ docs/context/current-state.json を確認し、動作モードを判定してく
 - docs/context/review-results.md から指摘事項を読み込む
 - docs/context/current-state.json の plan_file から元の計画書を参照する
 
+### レビュー未完了モード
+- current_phase が "review" かつ review_result が "PARTIAL" の場合
+- → 修正計画は作成しない。以下のメッセージを出力して終了:
+  「レビューが部分的にしか完了していません。`/code-review` をリトライして全観点の結果を揃えてから /architect を再実行してください。」
+
 ### エラー
 - 上記いずれにも該当しない場合は、まず /hear を案内してください。
 
