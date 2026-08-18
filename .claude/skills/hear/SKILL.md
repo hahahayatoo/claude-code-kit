@@ -1,7 +1,7 @@
 ---
 name: hear
 description: ユーザーの要望を聞いて詳細な要件を整理する。新しい機能の実装前に使用。
-allowed-tools: Read, Grep, Glob, Write, AskUserQuestion, WebSearch, WebFetch, Bash, TodoWrite
+allowed-tools: Read, Grep, Glob, Write, AskUserQuestion, WebSearch, WebFetch, Bash, TodoWrite, Task
 ---
 
 # 要件ヒアリング
@@ -58,14 +58,51 @@ allowed-tools: Read, Grep, Glob, Write, AskUserQuestion, WebSearch, WebFetch, Ba
 
 ## タスク
 
-### 1. 現状理解(コードベース調査)
-既存のコードベースを調査して現状を把握してください。
-ここで得た以下の情報は、後続の `/architect` で再調査されないよう、タスク 4 で `docs/context/handoff.md` に集約して引き継ぎます：
+### 1. 現状理解（3 focus 並列 code exploration）
 
+コードベース調査を **3 focus 並列** で実施する。**単一のアシスタントメッセージ内で 3 つの Task ツール呼び出しを並列送信** すること（sequential にしない）。
+
+#### 起動する 3 エージェント
+
+`code-explorer-agent` を以下の focus で並列起動:
+
+- `focus=similar`: ユーザー要望に類似する既存機能を発見・トレース
+- `focus=architecture`: 対象領域のディレクトリ構造・抽象化層・主要 interface をマップ
+- `focus=related`: 関連する cross-cutting concerns (auth/logging/cache/config 等) を発見
+
+#### 各エージェントに渡すプロンプト内容
+
+- `focus`: 上記のいずれか
+- `user request`: ユーザーの初期発言（要望テキスト）
+- `repo root`: 対象リポジトリ（通常は cwd）
+
+#### 結果の受け取りと集約
+
+各 explorer は return value で以下形式を返す:
+```
+focus: <name>
+## Findings
+- ...
+## Key files to read
+- ...
+## Notes
+- ...
+```
+
+正規表現 `^focus:\s*(similar|architecture|related)$` で各応答の focus を識別する。
+
+集約するときは重複除去のうえ、後述のタスク 4 で `handoff.md` の以下 4 情報に **merge して統合**する（focus 別サブセクションは作らない、既存フォーマット互換維持）:
 - 言語・技術スタックの候補（ビルド設定ファイル、`package.json` / `Cargo.toml` / `pyproject.toml` 等から推定）
 - ディレクトリ構造の概要（ソース/テスト/設定の配置）
 - 要望に関連する既存ファイル・関数（影響範囲の特定）
 - 既存機能との関係性（拡張なのか、置き換えなのか、独立なのか）
+
+Key files to read で優先度高と示されたファイルは、必要に応じて main Claude が追加 Read して、後続の Task 2 の質問精度を上げてよい。
+
+#### 部分失敗ハンドリング
+
+- 3 並列中 1-2 つが失敗 → 成功分だけで進行、handoff.md の該当セクションに「N/3 explorer 成功（失敗: <focus 名>）」と明記
+- 3 つすべて失敗 → ユーザーにリトライを促す（handoff.md は書き出さない）
 
 ### 2. 要件確認
 
