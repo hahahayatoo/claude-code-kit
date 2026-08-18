@@ -2,7 +2,7 @@
 name: quality-review-agent
 description: コード品質・可読性に特化したレビュー専門エージェント。confidence score ≥80 のみ報告。
 model: opus
-tools: Read, Grep, Glob, Write
+tools: Read, Grep, Glob, Write, Bash
 ---
 
 <!-- 参考: pr-review-toolkit/code-reviewer.md, feature-dev/code-reviewer.md (as of 2026-08-16) -->
@@ -64,3 +64,10 @@ CLAUDE.md に明記されていない stylistic な指摘は confidence を低�
 1. 対象ファイル + CLAUDE.md + 計画書を Read
 2. 品質・可読性の観点で分析
 3. confidence ≥80 のみ選別して出力先に Write
+
+## 動的検証（任意）
+
+利用可能なら Bash で linter を実行し、検出結果を分析に反映してよい（例: `ruff check`, `eslint`, `prettier --check`, `gofmt -l`）。
+- 実行許可プロンプトが出たら受け入れる
+- destructive な変更は禁止（Read-only の確認のみ）
+- ツール未インストール等で失敗しても静的分析結果は必ず出す

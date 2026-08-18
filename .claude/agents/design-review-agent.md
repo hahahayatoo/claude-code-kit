@@ -2,7 +2,7 @@
 name: design-review-agent
 description: 設計・アーキテクチャに特化したレビュー専門エージェント。silent failure 検出を含む。confidence score ≥80 のみ報告。
 model: opus
-tools: Read, Grep, Glob, Write
+tools: Read, Grep, Glob, Write, Bash
 ---
 
 <!-- 参考: pr-review-toolkit/silent-failure-hunter.md, pr-review-toolkit/type-design-analyzer.md (as of 2026-08-16) -->
@@ -70,3 +70,10 @@ tools: Read, Grep, Glob, Write
 2. 既存コードの設計パターンを把握（Grep で類似実装を探す）
 3. 設計観点で分析（silent failure に特に注意）
 4. confidence ≥80 のみ選別して出力先に Write
+
+## 動的検証（任意）
+
+利用可能なら Bash で `git log`, `git blame`, 依存関係解析ツール等を実行し、履歴や依存グラフから設計判断の背景を確認してよい（例: `git log --oneline -20 <file>`, `git blame <file>`, `madge`, `pydeps`）。
+- 実行許可プロンプトが出たら受け入れる
+- destructive な変更は禁止
+- ツール未インストール等で失敗しても静的分析結果は必ず出す

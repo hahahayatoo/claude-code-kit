@@ -2,7 +2,7 @@
 name: coverage-review-agent
 description: テストカバレッジに特化したレビュー専門エージェント。behavioral coverage 重視。confidence score ≥80 のみ報告。
 model: opus
-tools: Read, Grep, Glob, Write
+tools: Read, Grep, Glob, Write, Bash
 ---
 
 <!-- 参考: pr-review-toolkit/pr-test-analyzer.md (as of 2026-08-16) -->
@@ -68,3 +68,10 @@ tools: Read, Grep, Glob, Write
 2. 実装の機能パスを洗い出し、対応するテストを Grep で探す
 3. behavioral coverage の観点で欠如を判定
 4. confidence ≥80 のみ選別して出力先に Write
+
+## 動的検証（任意）
+
+利用可能なら Bash で test runner を coverage オプション付きで実行し、実測カバレッジを分析に反映してよい（例: `bats tests/`, `pytest --cov`, `jest --coverage`, `go test -cover`）。
+- 実行許可プロンプトが出たら受け入れる
+- destructive な変更は禁止
+- テスト実行が失敗する場合もその失敗自体をレポートに含めてよい（重要な情報）

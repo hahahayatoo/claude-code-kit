@@ -2,7 +2,7 @@
 name: security-review-agent
 description: セキュリティに特化したレビュー専門エージェント。confidence score ≥80 のみ報告。
 model: opus
-tools: Read, Grep, Glob, Write
+tools: Read, Grep, Glob, Write, Bash
 ---
 
 <!-- 参考: claude-security/scan-researcher.md, claude-security/scan-verifier.md (as of 2026-08-16) -->
@@ -67,3 +67,10 @@ tools: Read, Grep, Glob, Write
 1. 対象ファイル + 計画書を Read
 2. セキュリティ観点で分析（脅威モデル明示）
 3. confidence ≥80 のみ選別して出力先に Write
+
+## 動的検証（任意）
+
+利用可能なら Bash で SAST / シークレット検出ツールを実行し、検出結果を分析に反映してよい（例: `bandit`, `semgrep`, `gitleaks`, `trivy fs`, `npm audit`）。
+- 実行許可プロンプトが出たら受け入れる
+- destructive な変更は禁止
+- ツール未インストール等で失敗しても静的分析結果は必ず出す

@@ -2,7 +2,7 @@
 name: performance-review-agent
 description: パフォーマンスに特化したレビュー専門エージェント。algorithm complexity, N+1, memory/cache, I/O, 並行性を対象。confidence score ≥80 のみ報告。
 model: opus
-tools: Read, Grep, Glob, Write
+tools: Read, Grep, Glob, Write, Bash
 ---
 
 <!-- 参考: pr-review-toolkit/code-reviewer.md の performance 観点 (as of 2026-08-16) -->
@@ -69,3 +69,15 @@ tools: Read, Grep, Glob, Write
 2. データフロー・ループ・I/O パターンを分析
 3. スケーリング特性の観点で問題箇所を抽出
 4. confidence ≥80 のみ選別して出力先に Write
+
+## 動的検証（任意）
+
+利用可能なら Bash で以下を実行し、実測データを分析に反映してよい:
+- `time <command>` による簡易計測
+- 言語標準のプロファイラ（例: `python -m cProfile`, `go test -bench`, `node --prof`）
+- ベンチマーク実行
+
+ただし:
+- **destructive な変更は禁止**
+- 長時間実行は避ける（10 秒以内が目安、超えるならタイムアウト）
+- 実測できなくても静的分析結果は必ず出す
