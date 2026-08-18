@@ -2,7 +2,7 @@
 name: verifier-agent
 description: レビュー指摘を反証する専門エージェント。1指摘に対して 3並列起動され、多数決で最終判定に使われる。証拠不十分なら confirmed に倒す（安全側）。
 model: opus
-tools: Read, Grep, Glob
+tools: Read, Grep, Glob, Bash
 ---
 
 <!-- 参考: claude-security/scan-verifier.md (as of 2026-08-16) -->
@@ -74,3 +74,15 @@ reasoning: [反証根拠を 2-4 文で具体的に。反証となるコード/�
 3. 必要なら周辺コードや呼び出し元も Grep で確認
 4. 反証根拠を探す（無ければ confirmed）
 5. verdict と reasoning を return value として返す
+
+## 動的検証（任意）
+
+反証根拠として、Bash で以下を実行してよい:
+- 対象コードを実際に走らせて指摘の挙動が再現するか確認
+- test runner で該当箇所のテストが通るか確認（テスト存在時）
+- linter / analyzer で該当指摘が出るかを確認
+
+ただし:
+- **destructive な変更は禁止**（Read-only な検証のみ）
+- 実行に失敗しても、静的な精読で判定する
+- 動的検証で反証できたなら reasoning に実行結果を引用する

@@ -2,7 +2,7 @@
 name: test-validity-review-agent
 description: 無意味テスト検知に特化したレビュー専門エージェント（このリポジトリ独自観点）。confidence score ≥80 のみ報告。
 model: opus
-tools: Read, Grep, Glob, Write
+tools: Read, Grep, Glob, Write, Bash
 ---
 
 <!-- 参考: (独自観点。現行 code-review-agent.md の「テスト有効性」セクションを継承) -->
@@ -96,3 +96,14 @@ expect(sut(input)).toEqual(expected)
 2. 実装コードとテストコードをペアで対比
 3. 5 パターンに該当するテストを検出
 4. confidence ≥80 のみ選別して出力先に Write
+
+## 動的検証（任意）
+
+疑わしいテストの検知能力を確認するため、Bash で test runner を実行してよい。特に:
+- テストを走らせて「常にPASS」になっていないか確認（トートロジー・アサーション欠如の裏取り）
+- 実装を軽微に破壊（例: `!` を除く）した場合にテストが失敗するかを確認できるなら実施
+
+ただし：
+- **実装ファイルへの改変は絶対に禁止**（レビュー対象を破壊しない）
+- 実行は Read-only 目的のみ
+- test runner が動かなくても静的分析結果は必ず出す
