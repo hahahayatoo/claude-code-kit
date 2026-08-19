@@ -1,7 +1,7 @@
 ---
 name: architect
 description: 要件に基づいて実装計画・アーキテクチャ設計を行う。/hearの後、またはCritical/Majorのレビュー指摘時の修正計画作成に使用。
-allowed-tools: Read, Grep, Glob, Write, Edit, AskUserQuestion, WebSearch, WebFetch, Bash, TodoWrite
+allowed-tools: Read, Grep, Glob, Write, Edit, AskUserQuestion, WebSearch, WebFetch, Bash, TodoWrite, Task
 ---
 
 # アーキテクチャ設計・実装計画
@@ -130,6 +130,74 @@ docs/context/current-state.json を確認し、動作モードを判定してく
 
 分割の原則: 機能単位で独立テスト可能、依存される側を先に、技術リスクが高いものを先に。
 1イテレーション = テストケース3-7件、変更ファイル1-3の規模。
+
+### 3.5. 複数案並列生成と選択
+
+Task 3 でタスクサイズと大まかな方向性が固まった後、**3 focus 並列** で実装アーキテクチャを生成し、ユーザーに選択させる。**単一のアシスタントメッセージ内で 3 つの Task ツール呼び出しを並列送信** すること。
+
+**修正計画モードでは本 Task 3.5 は実行しない**（修正計画は既存のシリアル実行を維持する）。
+
+#### 起動する 3 エージェント
+
+`code-architect-agent` を以下の focus で並列起動:
+
+- `focus=minimal`: 最小変更・最大再利用のアプローチ
+- `focus=clean`: 抽象化と保守性を優先（リファクタリング許容）
+- `focus=pragmatic`: minimal と clean の中間、バランス型
+
+#### 各エージェントに渡すプロンプト内容
+
+- `focus`: 上記のいずれか
+- `requirements`: `docs/context/requirements.md` の要点（またはパス指定で Read させる）
+- `handoff context`: `handoff.md` の技術スタック・既存ファイル情報の要点
+- `task breakdown`: Task 2 のアーキ検討結果と Task 3 のタスク分割方針
+
+#### 結果の受け取り
+
+各 architect は return value で以下形式を返す:
+```
+focus: <name>
+## Approach Summary
+...
+## Pros
+- ...
+## Cons
+- ...
+## Files to create/modify
+- ...
+## Key design decisions
+- ...
+## Notes
+- ...
+```
+
+正規表現 `^focus:\s*(minimal|clean|pragmatic)$` で各応答の focus を識別する。
+
+#### 3 案の比較と推奨案の明示
+
+main Claude は以下を実施:
+
+1. 3 応答の Approach / Pros / Cons を **比較表** で並べる
+2. **推奨案を 1 つ明示** する
+3. 推奨の判定基準（優先順位）:
+   1. **要件との整合性**（requirements.md との一致度）
+   2. **実装コスト**（変更ファイル数・工数）
+   3. **保守性**（長期的な変更容易性）
+4. 推奨案の理由を短く（2-3 文）述べる
+
+#### 選択 UX
+
+AskUserQuestion で 3 案から選択させる:
+- options: 3 案（Minimal / Clean / Pragmatic、推奨案を先頭に "(推奨)" 表記）
+- 「Other」は AskUserQuestion 標準機能に任せる（明示的な追加オプションは設けない）
+
+選択された案を Task 4-5 のベースとする。
+
+#### 特殊ケース
+
+- **3 案が本質的に同一**（要件が単純で選択肢が実質ない）→ AskUserQuestion をスキップし、そのまま Task 4 へ。「3 案とも本質的に同一のため直接進行」とユーザーに伝達
+- **部分失敗（3 並列中 1-2 失敗）** → 成功した案だけで比較・選択させる。「M/3 案のみ提示（失敗: <focus 名>）」とユーザーに伝達
+- **3 案とも失敗** → ユーザーにリトライを促す。計画書は書き出さない
 
 ### 4. テスト計画
 各イテレーションに対応するテストケースを計画する。
