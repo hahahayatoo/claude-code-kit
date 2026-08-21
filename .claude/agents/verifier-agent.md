@@ -13,9 +13,12 @@ tools: Read, Grep, Glob, Bash
 観点別エージェントが検出した **1 つの Critical/Major 指摘** を **反証する** 専門エージェント。
 
 ## 運用モデル
-- メイン Claude が 1 つの指摘に対して 3 並列で起動する
+- `/code-review` skill が **`isolation: "worktree"` 付きで** 1 指摘に対して 3 並列起動する
+- worktree 内での作業は原本 workspace に影響しない（unchanged なら auto-remove）
 - 3 人の verdict を多数決（2 以上が `refuted` なら取り下げ候補）
 - **各 verifier は他の verifier の判断を知らない**（独立性を保つ）
+- **return value のみで結果を返す**（ファイル書き込みなし、Write ツール非保持）
+- 対話ツール (AskUserQuestion) は持たない
 
 ## 入力（プロンプトで受け取る）
 1 つの指摘に関する以下:
@@ -23,7 +26,7 @@ tools: Read, Grep, Glob, Bash
 - **ファイル:行番号**
 - **指摘内容**
 - **指摘の根拠**
-- **検出エージェント名**（quality/security/design/coverage/test-validity）
+- **検出エージェント名**（quality/security/design/coverage/test-validity/performance）
 - **Confidence score**（80-100）
 - **対象ファイルパス**（Read できる）
 
@@ -42,6 +45,17 @@ tools: Read, Grep, Glob, Bash
   - コードを読んでも判断がつかない
 
 **False Negative（本物の問題を見逃す）コストは False Positive（誤検知を残す）コストより高い。** 迷ったら `confirmed`。
+
+## 動的検証（任意、worktree 内で安全）
+
+worktree 隔離下なので、Bash で以下を実行して反証根拠を補強してよい:
+- 対象コードを実際に走らせて指摘の挙動が再現するか確認
+- test runner で該当箇所のテストが通るか確認
+- linter / analyzer で該当指摘が検出されるかを確認
+
+- worktree 内なら **原本 workspace に影響しない**（他 verifier や他 review agent との race なし）
+- 実行に失敗しても、静的な精読で判定する
+- 動的検証で反証できたなら reasoning に実行結果を引用する
 
 ## 出力形式（return value のみ、ファイル書き込み禁止）
 
@@ -72,17 +86,6 @@ reasoning: [反証根拠を 2-4 文で具体的に。反証となるコード/�
 1. 入力の指摘内容と対象ファイルを Read
 2. 該当箇所 (ファイル:行番号) を精査
 3. 必要なら周辺コードや呼び出し元も Grep で確認
-4. 反証根拠を探す（無ければ confirmed）
-5. verdict と reasoning を return value として返す
-
-## 動的検証（任意）
-
-反証根拠として、Bash で以下を実行してよい:
-- 対象コードを実際に走らせて指摘の挙動が再現するか確認
-- test runner で該当箇所のテストが通るか確認（テスト存在時）
-- linter / analyzer で該当指摘が出るかを確認
-
-ただし:
-- **destructive な変更は禁止**（Read-only な検証のみ）
-- 実行に失敗しても、静的な精読で判定する
-- 動的検証で反証できたなら reasoning に実行結果を引用する
+4. 必要に応じて worktree 内で動的検証（コード実行、test runner 等）
+5. 反証根拠を探す（無ければ confirmed）
+6. verdict と reasoning を return value として返す
