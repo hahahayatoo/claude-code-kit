@@ -78,6 +78,7 @@ docs/context/current-state.json を確認し、動作モードを判定してく
 
 ### 新規実装モードの場合
 - docs/context/current-state.json から以下を取得:
+  - workflow_dir: ワークフローフォルダ（成果物の置き場所。以降 `{workflow_dir}` と表記）
   - plan_file: 計画ファイルパス
   - current_iteration: 現在のイテレーション番号
   - total_iterations: 総イテレーション数
@@ -96,7 +97,7 @@ docs/context/current-state.json を確認し、動作モードを判定してく
 - **review-results.md は参照不要**（修正に必要な情報はすべて修正計画に含まれる）
 
 ### レビュー修正モード（Minor のみ）の場合
-- docs/context/review-results.md を読み込み、Minor 指摘事項を確認
+- `current-state.json` の `review_results_file`（= `{workflow_dir}/review-results.md`）を読み込み、Minor 指摘事項を確認
 - 指摘された箇所（ファイル名:行番号）と修正内容を把握
 
 ## 修正計画実行モード（current_phase が "fix-planned" の場合）
@@ -130,7 +131,7 @@ docs/context/current-state.json を確認し、動作モードを判定してく
 
 ### 修正手順
 
-1. docs/context/review-results.md を読み込む
+1. `current-state.json` の `review_results_file`（= `{workflow_dir}/review-results.md`）を読み込む
 2. Minor 指摘を確認
 3. **指摘内容が不明確な場合や修正方法に迷う場合は AskUserQuestion で質問**
 4. 各指摘に対して修正を実施
@@ -196,7 +197,7 @@ current-state.json の tdd_cycle を更新しながら進めてください。
 > **注意**: この手順は新規実装モード専用です。修正計画実行モード・レビュー修正モードでは、各モードの「修正手順」に従ってください。
 
 1. current-state.json から current_iteration を確認
-2. 計画書（docs/plans/）の該当イテレーションセクションを確認
+2. 計画書（`plan_file` が指すファイル）の該当イテレーションセクションを確認
 3. **計画書に `## 確認事項` セクションがあれば読み込んで頭に入れる**（毎イテレーションで実行。サブエージェントはイテレーション間でコンテキストを引き継がないため）
    - 列挙されている論点は「**実装中に判断が必要になる可能性のある事項**」
    - 該当する状況に実装中に達したら、推測せず必ず AskUserQuestion でユーザーに確認する
@@ -229,5 +230,5 @@ current-state.json の tdd_cycle を更新しながら進めてください。
 
 - テストなしの実装コード追加
 - .env ファイルの編集
-- ソースディレクトリ、テストディレクトリ以外への書き込み（docs/context/ を除く）
+- ソースディレクトリ、テストディレクトリ以外への書き込み（`docs/context/current-state.json` とワークフローフォルダを除く）
 - **`current_iteration` の変更**（イテレーション番号の管理は commit-agent の責務）

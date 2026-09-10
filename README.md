@@ -106,6 +106,28 @@ DB スキーマの新規設計は `/architect` で行う（DB 専用の設計ス
 既存コードベースから自動検出するか、ユーザーに確認して確定し、
 `docs/context/current-state.json` に記録される。
 
+## ワークフロー成果物の置き場所
+
+1つの要望（イシュー）に対する成果物は、**イシュー単位のワークフローフォルダ**にまとめられる。
+
+```
+docs/
+├── context/
+│   └── current-state.json           # 固定パス。ワークフロー状態（全スキルの入口）
+└── workflows/
+    └── 20260910-user-auth/          # {YYYYMMDD}-{feature_name}
+        ├── requirements.md          # /hear
+        ├── handoff.md               # /hear
+        ├── plan.md                  # /architect
+        ├── review-results.md        # /code-review
+        ├── verify-log.md            # /code-review（反証ログ）
+        └── test-analysis.md         # /test
+```
+
+- フォルダを作成するのは `/hear` のみ。フォルダ名は `feature_name` のスラッグと実行日から決まる
+- 後続のスキル/エージェントは `current-state.json` の `workflow_dir` を読んで、その配下に成果物を置く
+- ワークフロー完了時（全イテレーション commit 済み）も **フォルダは削除されず履歴として残る**
+
 ## 構成
 
 ```

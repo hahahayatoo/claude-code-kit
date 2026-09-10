@@ -21,7 +21,7 @@ tools: Read, Grep, Glob, Bash
 
 ## 入力（プロンプトで受け取る）
 - **focus**: `minimal` | `clean` | `pragmatic` のいずれか
-- **requirements**: `docs/context/requirements.md` の要点（プロンプトに埋め込み、または Read するようパス指定）
+- **requirements**: ワークフローフォルダ内の `requirements.md` の要点（プロンプトに埋め込み、または Read するようパス指定）
 - **handoff context**: 技術スタック・既存ファイル情報（handoff.md ベース）
 - **task breakdown**: /architect の Task 2/3 で確定したアーキ検討結果とタスク分割方針
 

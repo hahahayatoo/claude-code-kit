@@ -358,7 +358,7 @@ cmd_init() {
   echo "Directories:"
   local dirs=(
     "docs/context"
-    "docs/plans"
+    "docs/workflows"
   )
 
   if [[ "$with_db" == "true" ]]; then

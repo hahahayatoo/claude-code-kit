@@ -22,7 +22,7 @@ allowed-tools: Read, Grep, Glob, Write, AskUserQuestion, WebSearch, WebFetch, Ba
 - Read: コードベースの調査
 - Grep: パターン検索
 - Glob: ファイル検索
-- Write: docs/context/ への書き込みのみ
+- Write: ワークフローフォルダ（`docs/workflows/{YYYYMMDD}-{feature_name}/`）と `docs/context/current-state.json` への書き込みのみ
 - AskUserQuestion: ユーザーへの質問
 - WebSearch: インターネット検索
 - WebFetch: Webページの内容取得
@@ -41,6 +41,33 @@ allowed-tools: Read, Grep, Glob, Write, AskUserQuestion, WebSearch, WebFetch, Ba
 日付・日時を出力する際は、必ず `date` コマンドを使用してください。
 - ISO8601形式: `date -Iseconds`
 - YYYYMMDD形式: `date +%Y%m%d`
+
+## ワークフローフォルダ
+
+1つの要望（イシュー）に対する成果物は、すべて **1つのワークフローフォルダ** にまとめます。
+
+```
+docs/
+├── context/
+│   └── current-state.json           # 固定パス。全スキル/エージェントの入口
+└── workflows/
+    └── 20260910-user-auth/          # ワークフローフォルダ
+        ├── requirements.md          # /hear
+        ├── handoff.md               # /hear
+        ├── plan.md                  # /architect
+        ├── review-results.md        # /code-review
+        ├── verify-log.md            # /code-review
+        └── test-analysis.md         # /test
+```
+
+- フォルダ名は `{YYYYMMDD}-{feature_name}` 形式（例: `20260910-user-auth`）
+  - `YYYYMMDD` は `date +%Y%m%d` で取得した実行日
+  - `{feature_name}` は英小文字・数字・ハイフンのみのスラッグにする（日本語・スペース・大文字は使わない）
+- **このフォルダを作成するのは `/hear` だけ**です。後続のスキル/エージェントは
+  `docs/context/current-state.json` の `workflow_dir` を読み、そのフォルダ配下に成果物を置きます。
+- 同名のフォルダが既に存在する場合は、上書きせず AskUserQuestion で「既存フォルダの続きとして進めるか、別名で新規作成するか」を確認してください。
+
+以降、このドキュメントで `{workflow_dir}` と書かれている箇所は、このフォルダのパスを指します。
 
 ## 進捗管理（TodoWrite）
 
@@ -135,14 +162,25 @@ Key files to read で優先度高と示されたファイルは、必要に応�
 すべて満たしたら、ユーザーに「要件の確認は以上です。要件をまとめます。」と宣言して次のステップに進んでください。
 
 ### 3. 要件整理
-ヒアリング結果を docs/context/requirements.md に出力してください。
+
+#### 3-1. ワークフローフォルダの確定
+
+まず `feature_name`（英小文字・数字・ハイフンのスラッグ）を決め、`date +%Y%m%d` と組み合わせて
+ワークフローフォルダのパス `docs/workflows/{YYYYMMDD}-{feature_name}/` を確定してください。
+
+同名フォルダが既に存在する場合の扱いは「ワークフローフォルダ」節に従います。
+
+#### 3-2. 要件の出力
+
+ヒアリング結果を `{workflow_dir}/requirements.md` に出力してください。
 
 **出力前の確認**: 要件をまとめたら、出力する前にユーザーに全体を提示して確認を取ってください。
+このとき、確定した `feature_name`（= フォルダ名）も併せて提示します。
 ユーザーが承認するまでファイルに書き込まないでください。
 
 ### 4. 引き継ぎメモ出力（handoff.md）
 
-タスク 1 で得たコードベース調査結果と、ヒアリング中に得た「要件には含まれないが設計判断に必要な補足コンテキスト」を `docs/context/handoff.md` に出力してください。
+タスク 1 で得たコードベース調査結果と、ヒアリング中に得た「要件には含まれないが設計判断に必要な補足コンテキスト」を `{workflow_dir}/handoff.md` に出力してください。
 
 このファイルは `/architect` が読み込み、再調査と文脈の欠落を防ぎます。
 
@@ -157,7 +195,7 @@ Key files to read で優先度高と示されたファイルは、必要に応�
 
 ## 出力フォーマット
 
-### docs/context/requirements.md
+### {workflow_dir}/requirements.md
 
 ```markdown
 ## 要件サマリー
@@ -181,7 +219,7 @@ Key files to read で優先度高と示されたファイルは、必要に応�
 - ケース1: [対応方針]
 ```
 
-### docs/context/handoff.md
+### {workflow_dir}/handoff.md
 
 ```markdown
 # /hear → /architect 引き継ぎメモ
@@ -233,12 +271,15 @@ docs/context/current-state.json を以下の形式で作成/更新：
 {
   "workflow_id": "[UUID]",
   "current_phase": "hear",
-  "feature_name": "[機能名]",
-  "requirements_file": "docs/context/requirements.md",
-  "handoff_file": "docs/context/handoff.md",
+  "feature_name": "[feature_name スラッグ]",
+  "workflow_dir": "docs/workflows/[YYYYMMDD]-[feature_name]",
+  "requirements_file": "docs/workflows/[YYYYMMDD]-[feature_name]/requirements.md",
+  "handoff_file": "docs/workflows/[YYYYMMDD]-[feature_name]/handoff.md",
   "updated_at": "[ISO8601形式]"
 }
 ```
+
+`workflow_dir` は後続のすべてのスキル/エージェントが成果物の置き場所を解決するための基準です。**必ず設定してください。**
 
 ## 次のステップ
 
