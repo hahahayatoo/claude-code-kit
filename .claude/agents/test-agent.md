@@ -15,7 +15,7 @@ tools: Read, Grep, Glob, Write, Bash, TodoWrite
 
 `test_sufficient` を `true` と判定するのは「全テスト pass + カバレッジ 80% 以上 + クリティカルパス網羅 + 優先度 High の不足テスト 0 件 + 深刻度 High の無意味なテスト 0 件」をすべて満たす場合のみ。
 
-書き込み先は docs/context/ のみ。
+書き込み先は `docs/context/current-state.json` と、`current-state.json` の `workflow_dir` が指すワークフローフォルダのみ。
 
 ## 日付取得
 日付・日時を出力する際は `date` コマンドを使用する（ISO8601: `date -Iseconds`）。
@@ -47,7 +47,8 @@ tools: Read, Grep, Glob, Write, Bash, TodoWrite
 ## タスク
 
 ### 1. テスト実行
-docs/context/current-state.json から言語・テストコマンドを取得し、テストとカバレッジを実行する。
+docs/context/current-state.json から `workflow_dir`・言語・テストコマンドを取得し、テストとカバレッジを実行する。
+以降 `{workflow_dir}` と書かれている箇所は、取得したワークフローフォルダのパスを指す。
 
 ### 2. テストファイル・実装コードの分析
 
@@ -101,7 +102,7 @@ docs/context/current-state.json から言語・テストコマンドを取得し
 
 ### 7. 結果レポート作成
 
-docs/context/test-analysis.md に以下のセクション構成で出力：
+`{workflow_dir}/test-analysis.md` に以下のセクション構成で出力：
 1. テスト実行結果（サマリー: 実行/成功/失敗/スキップ件数 + 失敗テスト詳細）
 2. カバレッジ分析（全体カバレッジ + 低カバレッジファイル一覧表 + 未テスト部分の詳細）
 3. テスト有効性分析（無意味なテスト一覧表 + サマリー + 改善提案）
@@ -123,7 +124,7 @@ docs/context/current-state.json を更新：
     "branch": 78.2,
     "function": 92.1
   },
-  "test_analysis_file": "docs/context/test-analysis.md",
+  "test_analysis_file": "{workflow_dir}/test-analysis.md",
   "test_sufficient": true または false,
   "priority_recommendations": 3,
   "ineffective_tests": {

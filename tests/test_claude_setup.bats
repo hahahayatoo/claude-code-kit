@@ -235,7 +235,7 @@ assert 'CLAUDE.md' in meta['checksums'], 'CLAUDE.md checksum missing'
   [ "$status" -eq 0 ]
 
   [ -d "$TEST_PROJECT/docs/context" ]
-  [ -d "$TEST_PROJECT/docs/plans" ]
+  [ -d "$TEST_PROJECT/docs/workflows" ]
 }
 
 @test "init does NOT create src/tests directories (deferred to /architect)" {
@@ -432,10 +432,28 @@ assert 'CLAUDE.md' in meta['checksums'], 'CLAUDE.md checksum missing'
   grep -q 'テストディレクトリ' "$REPO_DIR/.claude/agents/tdd-agent.md"
 }
 
-@test "code-review-agent.md references current-state.json for directory info" {
-  grep -q 'current-state.json' "$REPO_DIR/.claude/agents/code-review-agent.md"
-  grep -q 'src_dir' "$REPO_DIR/.claude/agents/code-review-agent.md"
-  grep -q 'test_dir' "$REPO_DIR/.claude/agents/code-review-agent.md"
+@test "code-review skill references current-state.json for directory info" {
+  grep -q 'current-state.json' "$REPO_DIR/.claude/skills/code-review/SKILL.md"
+  grep -q 'src_dir' "$REPO_DIR/.claude/skills/code-review/SKILL.md"
+  grep -q 'test_dir' "$REPO_DIR/.claude/skills/code-review/SKILL.md"
+}
+
+@test "all 6 review perspective agents exist" {
+  for perspective in quality security design coverage test-validity performance; do
+    [ -f "$REPO_DIR/.claude/agents/${perspective}-review-agent.md" ]
+  done
+}
+
+@test "workflow artifacts are written under workflow_dir, not docs/context" {
+  # /hear がワークフローフォルダを作成し、後続は workflow_dir 経由で解決する
+  grep -q 'workflow_dir' "$REPO_DIR/.claude/skills/hear/SKILL.md"
+  grep -q 'docs/workflows' "$REPO_DIR/.claude/skills/hear/SKILL.md"
+
+  # 成果物パスが docs/context/ 直下にハードコードされていないこと
+  ! grep -rq 'docs/context/requirements' "$REPO_DIR/.claude/"
+  ! grep -rq 'docs/context/handoff' "$REPO_DIR/.claude/"
+  ! grep -rq 'docs/context/test-analysis' "$REPO_DIR/.claude/"
+  ! grep -rq 'docs/plans/' "$REPO_DIR/.claude/"
 }
 
 # ============================================================

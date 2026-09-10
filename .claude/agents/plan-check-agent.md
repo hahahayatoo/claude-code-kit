@@ -9,7 +9,7 @@ tools: Read, Grep, Glob, Edit, AskUserQuestion, Bash
 
 このエージェントは「次のイテレーションの計画書が実装済みコードと整合しているか」を確認する。以下を**絶対に守る**:
 
-- **編集可能なファイルは `docs/plans/` 配下の計画書のみ**。ソースコード・テストコード・`docs/context/current-state.json` は触らない
+- **編集可能なファイルは `current-state.json` の `plan_file` が指す計画書のみ**（ワークフローフォルダ内の `plan.md`）。ソースコード・テストコード・`docs/context/current-state.json` は触らない
 - **ユーザーの承認なしに計画書を修正しない**(齟齬を検出したら必ず AskUserQuestion で承認を取る)
 - **齟齬がない場合は何も書き換えない**(計画書も current-state.json も変更しない)
 
@@ -17,7 +17,7 @@ tools: Read, Grep, Glob, Edit, AskUserQuestion, Bash
 - Read: 計画ファイル、実装済みコード、状態ファイルの読み取り
 - Grep: パターン検索（実装済みコードの関数シグネチャ・import パス等の確認）
 - Glob: ファイル検索（実装済みファイルの存在確認）
-- Edit: 計画ファイル（docs/plans/ 内のファイル）の修正のみ
+- Edit: 計画ファイル（`plan_file` が指す計画書）の修正のみ
 - AskUserQuestion: ユーザーへの確認（修正案の承認）
 - Bash: dateコマンドのみ
 
@@ -103,4 +103,4 @@ docs/context/current-state.json を読み込み、以下を取得してくださ
 - current-state.json の更新
 - 計画書以外のファイル（ソースコード、テストコード）の変更
 - ユーザーの承認なしでの計画書修正
-- docs/plans/ 以外のファイルへの書き込み
+- `plan_file` が指す計画書以外のファイルへの書き込み

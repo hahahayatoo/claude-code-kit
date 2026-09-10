@@ -23,7 +23,7 @@ Phase 6: 判定 + current-state.json 更新
 
 ## worktree 隔離と return value 化の背景
 
-以前は各 review agent が `docs/context/review-results-<perspective>.md` に **Write** していた。しかし並列実行下で以下の問題があった:
+以前は各 review agent が観点別の結果ファイル（`review-results-<perspective>.md`）に **Write** していた。しかし並列実行下で以下の問題があった:
 
 - test-validity や verifier が動的検証（mutation testing、test runner）で **原本 workspace のファイルを変更**
 - 他の並列 agent が読み取り中の状態を破壊、cross-contamination で racy な失敗
@@ -41,13 +41,19 @@ Phase 6: 判定 + current-state.json 更新
 
 **メイン Claude が 1 回だけ実施する**（各サブエージェントで重複させない）。
 
-### 1-0. 出力ディレクトリ準備
+### 1-0. ワークフローフォルダの解決
 
-`mkdir -p docs/context` を Bash で実行。
+`docs/context/current-state.json` を Read し、`workflow_dir` を取得する。
+以降このドキュメントで `{workflow_dir}` と書かれている箇所は、このパスを指す。
+レビューの成果物（`review-results.md` / `verify-log.md`）はすべてこのフォルダ配下に置く。
+
+`mkdir -p {workflow_dir}` を Bash で実行する。
+
+**`workflow_dir` が取得できない場合**は中止し、`/hear` からやり直すよう案内する。
 
 ### 1-1. 前提条件チェック
 
-`docs/context/current-state.json` を Read し、以下を確認:
+同じ `current-state.json` で以下を確認:
 
 - `current_phase == "implement"` であること
 - `last_test_result == "pass"` であること
@@ -164,7 +170,7 @@ verifier-agent 1 呼び出しにつき、1 つの指摘の以下を渡す:
 
 ### verify-log.md 書き出し（監査用、集約結果のみ）
 
-**main Claude が原本 workspace の** `docs/context/verify-log.md` に以下の形式で書き出す（reasoning は含めない、シンプル）:
+**main Claude が原本 workspace の** `{workflow_dir}/verify-log.md` に以下の形式で書き出す（reasoning は含めない、シンプル）:
 
 ```markdown
 # 反証ログ
@@ -184,7 +190,7 @@ verifier-agent 1 呼び出しにつき、1 つの指摘の以下を渡す:
 
 ## Phase 5: review-results.md 合成（main Claude が書く）
 
-**main Claude が原本 workspace の** `docs/context/review-results.md` を以下の 8 セクション構成で Write する。
+**main Claude が原本 workspace の** `{workflow_dir}/review-results.md` を以下の 8 セクション構成で Write する。
 
 ### 合成ルール
 
@@ -272,12 +278,13 @@ verifier-agent 1 呼び出しにつき、1 つの指摘の以下を渡す:
   "current_phase": "review",
   "review_result": "PASS" | "NEEDS_WORK" | "REJECT",
   "has_critical_or_major": true | false,
-  "review_results_file": "docs/context/review-results.md",
+  "review_results_file": "{workflow_dir}/review-results.md",
   "updated_at": "[ISO8601]"
 }
 ```
 
 - `has_critical_or_major`: 確定 Critical または Major が 1 件以上あれば `true`
+- `review_results_file` は `{workflow_dir}` を展開した実パスで書き込む
 
 ---
 
@@ -295,7 +302,7 @@ Phase 2 で 6 観点のうち **1 つ以上のエージェントが失敗** し�
      "current_phase": "review",
      "review_result": "PARTIAL",
      "has_critical_or_major": null,
-     "review_results_file": "docs/context/review-results.md",
+     "review_results_file": "{workflow_dir}/review-results.md",
      "updated_at": "[ISO8601]"
    }
    ```

@@ -47,6 +47,20 @@ Sonnet は指示に忠実に従いますが、曖昧な記述から意図を汲�
 ## 日付取得
 日付・日時を出力する際は `date` コマンドを使用する（ISO8601: `date -Iseconds`、YYYYMMDD: `date +%Y%m%d`）。
 
+## ワークフローフォルダ
+
+1つの要望（イシュー）に対する成果物は `docs/workflows/{YYYYMMDD}-{feature_name}/` に集約されています。
+このフォルダを作成するのは `/hear` であり、`/architect` は **既存のフォルダに計画書を追加する** 立場です。
+
+最初に `docs/context/current-state.json` の `workflow_dir` を読み、以降このドキュメントで `{workflow_dir}` と
+書かれている箇所はそのパスを指すものとして扱ってください。入力（`requirements.md` / `handoff.md` /
+`review-results.md`）も出力（`plan.md`）もすべてこのフォルダ配下にあります。
+
+**`workflow_dir` が存在しない場合のフォールバック**（旧形式の state を引き継いだケース）:
+`feature_name` と `date +%Y%m%d` から `docs/workflows/{YYYYMMDD}-{feature_name}/` を組み立てて作成し、
+`current-state.json` に `workflow_dir` を設定してから続行する。既存の入力ファイルが `docs/context/` 直下に
+ある場合は、そのパスを読んだうえで出力のみ新フォルダに書く。
+
 ## 進捗管理（TodoWrite）
 
 以下の主要ステップを TodoWrite で管理し、進捗をユーザーに可視化してください。
@@ -76,13 +90,13 @@ docs/context/current-state.json を確認し、動作モードを判定してく
 ### 新規計画モード
 - current_phase が "hear" の場合
 - → 要件に基づいて新規の実装計画を作成する
-- docs/context/requirements.md から要件を読み込む
+- `{workflow_dir}/requirements.md`（= `current-state.json` の `requirements_file`）から要件を読み込む
 
 ### 修正計画モード
 - current_phase が "review" かつ review_result が "NEEDS_WORK" または "REJECT" の場合
 - かつ、has_critical_or_major が true の場合
 - → レビュー指摘に基づいて修正計画を作成する
-- docs/context/review-results.md から指摘事項を読み込む
+- `{workflow_dir}/review-results.md`（= `current-state.json` の `review_results_file`）から指摘事項を読み込む
 - docs/context/current-state.json の plan_file から元の計画書を参照する
 
 ### レビュー未完了モード
@@ -99,7 +113,7 @@ docs/context/current-state.json を確認し、動作モードを判定してく
 
 ### 0. handoff.md の引き継ぎと技術スタック確定
 
-`docs/context/handoff.md` が存在するか確認する。
+`{workflow_dir}/handoff.md`（= `current-state.json` の `handoff_file`）が存在するか確認する。
 
 #### handoff.md がある場合（通常ケース：/hear から遷移）
 - `handoff.md` を技術スタック・ディレクトリ構成の **起点** として扱う
@@ -114,7 +128,7 @@ docs/context/current-state.json を確認し、動作モードを判定してく
 確定する項目: language, test_framework, test_command, file_extension, src_dir, test_dir, migration_tool（DB利用時のみ）
 
 ### 1. 要件分析
-`docs/context/requirements.md` を読み込み、要件を理解する。
+`{workflow_dir}/requirements.md` を読み込み、要件を理解する。
 
 ### 2. アーキテクチャ検討
 既存コードとの整合性を確認し、変更が必要なコンポーネントを特定する。
@@ -148,7 +162,7 @@ Task 3 でタスクサイズと大まかな方向性が固まった後、**3 foc
 #### 各エージェントに渡すプロンプト内容
 
 - `focus`: 上記のいずれか
-- `requirements`: `docs/context/requirements.md` の要点（またはパス指定で Read させる）
+- `requirements`: `{workflow_dir}/requirements.md` の要点（またはパス指定で Read させる）
 - `handoff context`: `handoff.md` の技術スタック・既存ファイル情報の要点
 - `task breakdown`: Task 2 のアーキ検討結果と Task 3 のタスク分割方針
 
@@ -203,7 +217,8 @@ AskUserQuestion で 3 案から選択させる:
 各イテレーションに対応するテストケースを計画する。
 
 ### 5. 計画書作成
-以下の「計画書フォーマット」に従い、`docs/plans/YYYYMMDD-{feature_name}.md` に保存する。
+以下の「計画書フォーマット」に従い、`{workflow_dir}/plan.md` に保存する。
+（日付と機能名はワークフローフォルダ名が持つため、ファイル名では繰り返さない）
 
 ---
 
@@ -212,7 +227,7 @@ AskUserQuestion で 3 案から選択させる:
 > **注意**: このセクション（タスク 1〜5 および修正計画フォーマット）は修正計画モード専用です。新規計画モードでは実行しないでください。
 
 ### 1. 指摘事項の分析
-docs/context/review-results.md を読み込み、Critical / Major の指摘をすべて把握する。
+`{workflow_dir}/review-results.md` を読み込み、Critical / Major の指摘をすべて把握する。
 
 ### 2. 根本原因の特定
 複数の指摘が同一の根本原因に起因していないかを分析する。
@@ -360,7 +375,7 @@ tdd-agent はこのセクションがあれば読み込み、**該当する論�
 ### 新規計画モードの場合
 計画書作成後、以下を更新する：
 
-1. **docs/context/current-state.json**: current_phase を "architect" に更新し、plan_file, total_iterations, current_iteration(=1), language, test_framework, test_command, file_extension, src_dir, test_dir, migration_tool, updated_at を設定
+1. **docs/context/current-state.json**: current_phase を "architect" に更新し、plan_file（= `{workflow_dir}/plan.md`）, total_iterations, current_iteration(=1), language, test_framework, test_command, file_extension, src_dir, test_dir, migration_tool, updated_at を設定。フォールバックで `workflow_dir` を作成した場合は `workflow_dir` も設定する
 2. **CLAUDE.md**: 「プロジェクト設定」テーブルの `<!-- /architect で設定 -->` を確定値に置換
 
 ### 修正計画モードの場合

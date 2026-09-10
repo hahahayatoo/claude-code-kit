@@ -145,11 +145,16 @@ git commit でコミットを実行してください。
 **条件**: `current_iteration >= total_iterations`
 
 以下のJSONで current-state.json を更新（ワークフローをリセット）：
+
+**ワークフローフォルダ（`docs/workflows/{YYYYMMDD}-{feature_name}/`）自体は削除せず、履歴として残す。**
+リセットするのは状態ファイルの参照のみ。
+
 ```json
 {
   "workflow_id": null,
   "current_phase": null,
   "feature_name": null,
+  "workflow_dir": null,
   "tdd_cycle": null,
   "requirements_file": null,
   "plan_file": null,
